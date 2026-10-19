@@ -1,100 +1,27 @@
-<!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#234d3b"><link rel="manifest" href="manifest.webmanifest">
-<title>森林標準地調査 入力アプリ 試作2</title>
-<style>
-:root{--g:#234d3b;--p:#eef5ef;--line:#d7e1d9;--ink:#1c2921;--muted:#65736a}
-*{box-sizing:border-box}body{margin:0;background:#f4f6f4;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-header{background:var(--g);color:white;padding:17px 15px;position:sticky;top:0;z-index:5}header h1{font-size:18px;margin:0 0 4px}header p{font-size:12px;margin:0;opacity:.85}
-main{max-width:820px;margin:auto;padding:12px 10px 40px}.card{background:white;border:1px solid var(--line);border-radius:13px;padding:14px;margin-bottom:12px}
-h2{font-size:16px;margin:0 0 12px}.hint{font-size:12px;color:var(--muted);line-height:1.55}
-label{display:block;font-size:12px;font-weight:650;margin:0 0 5px}
-input,select,textarea{width:100%;font:inherit;border:1px solid #cbd6ce;border-radius:8px;padding:10px;background:#fff;color:var(--ink);min-height:42px}
-input[type=checkbox],input[type=radio]{width:18px;height:18px;min-height:18px;accent-color:var(--g)}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.wide{grid-column:1/-1}.field{min-width:0}
-.photos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.photo{border:1px solid var(--line);border-radius:10px;padding:11px}.photo b{font-size:14px}.fname{font-size:11px;color:var(--muted);overflow-wrap:anywhere;margin:5px 0 9px}
-button{font:inherit;font-weight:650;border:0;border-radius:8px;padding:11px;cursor:pointer}.primary{background:var(--g);color:white}.secondary{background:var(--p);color:var(--g);border:1px solid #cbdacf}.danger{background:#fff1ed;color:#8e2b1c}.photo button{width:100%}
-.status{font-size:12px;color:#25633e;min-height:17px;margin-top:6px}
-.tree{border:1px solid var(--line);border-radius:11px;padding:11px;margin:9px 0;background:#fcfdfc}.treehead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.treehead strong{font-size:14px}
-.species{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.species label,.checks label{display:flex;align-items:center;gap:5px;font-weight:500;margin:0;border:1px solid var(--line);border-radius:8px;padding:7px 5px;font-size:12px}.checks{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.checks label{padding:7px 8px}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.actions button{width:100%}#saved{font-size:12px;color:var(--muted);margin-top:9px}
-@media(max-width:420px){.card{padding:11px}.species{grid-template-columns:repeat(4,minmax(0,1fr))}.species label{font-size:11px;padding:7px 2px}.grid{gap:8px}}
-</style></head>
-<body>
-<header><h1>森林標準地調査</h1><p>入力アプリ試作版 2｜樹木入力を野帳様式に合わせて修正</p></header>
-<main>
-<section class="card">
-<h2>1. プロット基本情報</h2>
-<div class="grid">
-<div class="field"><label>プロット番号（必須）</label><input id="plotId" placeholder="例：390410"></div>
-<div class="field"><label>調査日時</label><input id="date" type="datetime-local"></div>
-<div class="field"><label>GPS 緯度</label><input id="lat" inputmode="decimal" placeholder="緯度"></div>
-<div class="field"><label>GPS 経度</label><input id="lon" inputmode="decimal" placeholder="経度"></div>
-<div class="field"><label>登録名</label><input id="regName"></div>
-<div class="field wide"><label>メモ</label><textarea id="memo"></textarea></div>
-</div></section>
-<section class="card"><h2>2. プロット写真</h2><p class="hint">撮影ボタンごとに用途を固定。写真を選択／撮影すると撮影済み表示になります。ファイル名の表示例は「プロット番号_N.jpg」です。</p><div class="photos" id="photoGrid"></div><div class="field" style="margin-top:10px"><label>その他写真</label><input id="otherPhoto" type="file" accept="image/*" capture="environment"><div id="otherStatus" class="status">未撮影</div></div></section>
-<section class="card"><h2>3. 林内環境</h2><div class="grid" id="envFields"></div></section>
-<section class="card"><h2>4. 代表樹木（12本）</h2><p class="hint">雛形の代表樹木欄に合わせ、樹種・その他樹種名・胸高直径・非上層木・枯損木・境界木・樹高1/2回目・生枝下高1/2回目・備考を入力します。</p><div id="representatives"></div></section>
-<section class="card"><h2>5. 全ての樹木</h2><p class="hint">13本目以降の樹木を追加します。必要な本数分、追加してください。</p><div id="trees"></div><button class="secondary" id="addTree" type="button">＋ 樹木を追加</button></section>
-<section class="card"><h2>6. 林分現況・下層植生</h2><div class="grid" id="standFields"></div></section>
-<section class="card"><h2>7. 保存・書き出し</h2><div class="actions"><button class="primary" id="save">この端末に保存</button><button class="secondary" id="export">入力データを書き出す</button><button class="secondary" id="exportPhotos">写真ファイルを保存</button><button class="danger" id="clear">画面をリセット</button></div><div id="saved">入力内容は保存ボタンで端末内に保存できます。</div><p class="hint">試作版のため、Microsoft 365同期と元のExcel様式への書き戻しは未実装です。写真保存先やカメラの動作は端末・ブラウザによって異なります。</p></section>
-</main>
-<script>
-const $=id=>document.getElementById(id);
-const photoTypes=[['N','北方向'],['E','東方向'],['S','南方向'],['W','西方向'],['ALL','全景'],['SPHERE','全天球']];
-const photoFiles={}; let allTreeCount=0;
-function pid(){return ($('plotId').value.trim()||'ID').replace(/[\\\\/:*?"<>|\\s]/g,'_')}
-function pname(k){return `${pid()}_${k}.jpg`}
-function renderPhotos(){
- $('photoGrid').innerHTML='';
- photoTypes.forEach(([k,label])=>{
-  const d=document.createElement('div');d.className='photo';
-  d.innerHTML=`<b>${label}</b><div class="fname">${pname(k)}</div><input id="f_${k}" type="file" accept="image/*" capture="environment" hidden><button class="primary" type="button" id="b_${k}">📷 撮影</button><div class="status" id="s_${k}">未撮影</div>`;
-  $('photoGrid').appendChild(d);
-  $('b_'+k).onclick=()=>$('f_'+k).click();
-  $('f_'+k).onchange=e=>{if(e.target.files[0]){photoFiles[k]=e.target.files[0];$('s_'+k).textContent='✓ 撮影済み';}};
- });
-}
-$('plotId').addEventListener('input',()=>document.querySelectorAll('.fname').forEach((e,i)=>{if(i<photoTypes.length)e.textContent=pname(photoTypes[i][0])}));
-const env=[['thinning','間伐'],['dead','枯損木'],['pest','病虫害'],['bending','根曲がり'],['deerBite','シカ採食痕跡'],['deerPath','シカ道'],['deerDroppings','シカ糞']];
-$('envFields').innerHTML=env.map(([id,n])=>`<div class="field"><label>${n}の有無</label><select id="${id}"><option value="">未選択</option><option value="有">有</option><option value="無">無</option></select></div>`).join('');
-const stand=[['canopy','高木層 平均樹高(m)'],['subcanopy','亜高木層 平均樹高(m)'],['shrub','低木層 平均樹高(m)'],['herb','草本層 平均樹高(m)'],['coverCanopy','高木層 植被率(%)'],['coverSub','亜高木層 植被率(%)'],['coverShrub','低木層 植被率(%)'],['coverHerb','草本層 植被率(%)'],['dominant','下層植生優占種（3種）']];
-$('standFields').innerHTML=stand.map(([id,n])=>`<div class="field ${id==='dominant'?'wide':''}"><label>${n}</label><input id="${id}" ${id==='dominant'?'placeholder="1種目、2種目、3種目"':''} ${id!=='dominant'?'type="number" min="0" step="0.5"':''}></div>`).join('');
-function treeCard(no,representative){
- const d=document.createElement('div');d.className='tree';d.dataset.no=no;d.dataset.rep=representative?'1':'0';
- d.innerHTML=`<div class="treehead"><strong>${representative?'代表木':'調査木'} No. ${no}</strong>${representative?'':'<button class="danger remove" type="button">削除</button>'}</div>
- <div class="field"><label>樹種（いずれか選択）</label><div class="species">
- <label><input type="radio" name="sp_${representative?'r':'t'}_${no}" value="S">スギ</label>
- <label><input type="radio" name="sp_${representative?'r':'t'}_${no}" value="H">ヒノキ</label>
- <label><input type="radio" name="sp_${representative?'r':'t'}_${no}" value="M">マツ</label>
- <label><input type="radio" name="sp_${representative?'r':'t'}_${no}" value="B">広葉樹</label></div></div>
- <div class="grid" style="margin-top:9px">
- <div class="field"><label>その他の樹種名</label><input class="other" placeholder="その他の場合"></div>
- <div class="field"><label>胸高直径（cm・6cm以上）</label><input class="dbh" type="number" min="6" step="0.1" placeholder="例：37.7"></div>
- ${representative?'<div class="field"><label>樹高（1回目・m）</label><input class="h1" type="number" min="0" step="0.1"></div><div class="field"><label>樹高（2回目・m）</label><input class="h2" type="number" min="0" step="0.1"></div><div class="field"><label>生枝下高（1回目・m）</label><input class="c1" type="number" min="0" step="0.1"></div><div class="field"><label>生枝下高（2回目・m）</label><input class="c2" type="number" min="0" step="0.1"></div>':''}
- ${representative?'':'<div class="field wide"><label>備考（梢端・獣害など）</label><input class="note" placeholder="備考"></div>'}
- </div>
- <div class="checks"><label><input class="nonupper" type="checkbox">非上層木</label><label><input class="deadwood" type="checkbox">枯損木</label><label><span>境界木</span><select class="boundary" style="width:78px;min-height:34px;padding:5px"><option value="">なし</option><option value="+">＋</option><option value="-">－</option></select></label></div>
- ${representative?'<div class="field" style="margin-top:9px"><label>備考</label><input class="note" placeholder="備考"></div>':''}
- <div class="field" style="margin-top:9px"><label>樹木写真（任意）</label><input class="treephoto" type="file" accept="image/*" capture="environment"><div class="status treephotostatus">未撮影</div></div>`;
- if(!representative)d.querySelector('.remove').onclick=()=>d.remove();
- d.querySelector('.treephoto').onchange=e=>{if(e.target.files[0])d.querySelector('.treephotostatus').textContent='✓ 写真選択済み';};
- return d;
-}
-for(let i=1;i<=12;i++)$('representatives').appendChild(treeCard(i,true));
-function addTree(){allTreeCount++;$('trees').appendChild(treeCard(allTreeCount+12,false))}
-$('addTree').onclick=addTree;
-function collectTrees(id){return [...$(id).querySelectorAll('.tree')].map(d=>({no:Number(d.dataset.no),species:d.querySelector('input[type=radio]:checked')?.value||'',otherSpecies:d.querySelector('.other').value,dbh:d.querySelector('.dbh').value,nonUpper:d.querySelector('.nonupper').checked,deadwood:d.querySelector('.deadwood').checked,boundary:d.querySelector('.boundary').value,height1:d.querySelector('.h1')?.value||'',height2:d.querySelector('.h2')?.value||'',clearHeight1:d.querySelector('.c1')?.value||'',clearHeight2:d.querySelector('.c2')?.value||'',note:d.querySelector('.note').value,photoSelected:!!d.querySelector('.treephoto').files.length}))}
-function collect(){let o={};['plotId','date','lat','lon','regName','memo','thinning','dead','pest','bending','deerBite','deerPath','deerDroppings','canopy','subcanopy','shrub','herb','coverCanopy','coverSub','coverShrub','coverHerb','dominant'].forEach(k=>o[k]=$(k).value);o.photos=Object.fromEntries(photoTypes.map(([k])=>[k,!!photoFiles[k]]));o.representatives=collectTrees('representatives');o.trees=collectTrees('trees');o.savedAt=new Date().toISOString();return o}
-function dl(blob,name){let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1200)}
-$('save').onclick=()=>{if(!$('plotId').value.trim()){alert('プロット番号を入力してください。');return}localStorage.setItem('forest_'+pid(),JSON.stringify(collect()));$('saved').textContent='✓ '+new Date().toLocaleString()+' に入力データを端末内へ保存しました。'};
-$('export').onclick=()=>{if(!$('plotId').value.trim()){alert('プロット番号を入力してください。');return}dl(new Blob([JSON.stringify(collect(),null,2)],{type:'application/json;charset=utf-8'}),pid()+'_data.json')};
-$('exportPhotos').onclick=()=>{let n=0;for(let [k,f] of Object.entries(photoFiles)){dl(f,pname(k));n++}if(!n)alert('保存する写真がありません。撮影ボタンから撮影してください。')};
-$('otherPhoto').onchange=e=>{if(e.target.files[0]){$('otherStatus').textContent='✓ その他写真あり';photoFiles.OTHER=e.target.files[0]}};
-$('clear').onclick=()=>{if(confirm('画面の入力内容をリセットしますか？保存済みデータは削除しません。'))location.reload()};
-renderPhotos();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>森林標準地調査 入力アプリ v3</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f3f6f3;color:#1d2b22;font-family:system-ui,sans-serif}header{background:#234d3b;color:white;padding:16px;position:sticky;top:0}h1{font-size:18px;margin:0}main{max-width:760px;margin:auto;padding:12px}.card{background:white;border:1px solid #d5e0d7;border-radius:13px;padding:14px;margin-bottom:12px}h2{font-size:16px;margin:0 0 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{min-width:0}label{display:block;font-size:12px;font-weight:650;margin-bottom:5px}input,select,textarea{width:100%;padding:10px;border:1px solid #cbd6ce;border-radius:8px;background:white;font:inherit;min-height:40px}.species{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.species label,.checks label{display:flex;align-items:center;gap:4px;border:1px solid #d5e0d7;border-radius:7px;padding:7px 4px;font-weight:500}input[type=radio],input[type=checkbox]{width:17px;height:17px;min-height:17px}.tree{border:1px solid #d5e0d7;border-radius:10px;padding:11px;margin:10px 0;background:#fcfdfc}.treehead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.checks{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.checks label{font-size:12px}.photos{display:grid;grid-template-columns:1fr 1fr;gap:8px}.photo{border:1px solid #d5e0d7;border-radius:9px;padding:10px}.photo button,button{border:0;border-radius:8px;padding:10px;font:inherit;font-weight:650;background:#234d3b;color:white}.photo button{width:100%}.secondary{background:#eef5ef;color:#234d3b;border:1px solid #cbdacf}.danger{background:#fff0ed;color:#8e2b1c}.fname,.status,.hint{font-size:12px;color:#65736a;overflow-wrap:anywhere}.status{margin-top:6px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.actions button{width:100%}@media(max-width:420px){.grid{gap:7px}.card{padding:11px}.species{gap:3px}.species label{font-size:11px;padding:6px 2px}}
+</style></head><body><header><h1>森林標準地調査 入力アプリ（試作 v3）</h1></header><main>
+<section class="card"><h2>1. プロット基本情報</h2><div class="grid"><div><label>プロット番号</label><input id="plotId" placeholder="例：390410"></div><div><label>調査日時</label><input id="date" type="datetime-local"></div><div><label>緯度</label><input id="lat"></div><div><label>経度</label><input id="lon"></div><div class="field" style="grid-column:1/-1"><label>メモ</label><textarea id="memo"></textarea></div></div></section>
+<section class="card"><h2>2. プロット写真</h2><div class="photos" id="photoGrid"></div><p class="hint">撮影ボタンから撮影または画像を選択すると、用途に応じたファイル名を表示します。</p></section>
+<section class="card"><h2>3. 林内環境</h2><div class="grid" id="env"></div></section>
+<section class="card"><h2>4. 代表樹木（12本）</h2><p class="hint">樹種・胸高直径・樹高・生枝下高などを入力します。</p><div id="reps"></div></section>
+<section class="card"><h2>5. 全ての樹木</h2><div id="trees"></div><button class="secondary" id="add" type="button">＋ 樹木を追加</button></section>
+<section class="card"><h2>6. 保存・書き出し</h2><div class="actions"><button id="save">この端末に保存</button><button class="secondary" id="export">入力データを書き出す</button></div><p class="status" id="status">入力内容は保存ボタンで端末内に保存できます。</p></section>
+</main><script>
+(function(){
+const $=id=>document.getElementById(id);const photoTypes=[['N','北'],['E','東'],['S','南'],['W','西'],['ALL','全景'],['SPHERE','全天球']];const photoState={};let treeCount=0;
+function id(){return ($('plotId').value.trim()||'ID').replace(/[^a-zA-Z0-9_-]/g,'_')}
+function drawPhotos(){const root=$('photoGrid');photoTypes.forEach(([key,label])=>{const d=document.createElement('div');d.className='photo';d.innerHTML='<b>'+label+'方向</b><div class="fname">'+id()+'_'+key+'.jpg</div><input type="file" accept="image/*" capture="environment" hidden><button type="button">📷 撮影</button><div class="status">未撮影</div>';const inp=d.querySelector('input'),btn=d.querySelector('button'),status=d.querySelector('.status');btn.onclick=()=>inp.click();inp.onchange=()=>{if(inp.files&&inp.files[0]){photoState[key]=inp.files[0];status.textContent='✓ 撮影済み（ファイル選択済み）'}};root.appendChild(d)});}
+$('plotId').addEventListener('input',()=>document.querySelectorAll('.fname').forEach((e,i)=>e.textContent=id()+'_'+photoTypes[i][0]+'.jpg'));
+[['thinning','間伐'],['pest','病虫害'],['dead','枯損木'],['bending','根曲がり'],['deer','シカ痕跡']].forEach(([k,n])=>{$('env').insertAdjacentHTML('beforeend','<div><label>'+n+'</label><select id="'+k+'"><option value="">未選択</option><option>有</option><option>無</option></select></div>')});
+function makeTree(no,rep){const d=document.createElement('div');d.className='tree';d.innerHTML='<div class="treehead"><b>'+(rep?'代表木':'調査木')+' No. '+no+'</b>'+(rep?'':'<button type="button" class="danger">削除</button>')+'</div><label>樹種</label><div class="species">'+[['S','スギ'],['H','ヒノキ'],['M','マツ'],['B','広葉樹']].map(([v,t])=>'<label><input type="radio" name="species_'+(rep?'r':'t')+no+'" value="'+v+'">'+t+'</label>').join('')+'</div><div class="grid" style="margin-top:9px"><div><label>その他の樹種名</label><input class="other"></div><div><label>胸高直径（cm）</label><input class="dbh" type="number" min="0" step="0.1"></div>'+(rep?'<div><label>樹高1回目（m）</label><input class="h1" type="number" step="0.1"></div><div><label>樹高2回目（m）</label><input class="h2" type="number" step="0.1"></div><div><label>生枝下高1回目（m）</label><input class="c1" type="number" step="0.1"></div><div><label>生枝下高2回目（m）</label><input class="c2" type="number" step="0.1"></div>':'')+'<div style="grid-column:1/-1"><label>備考</label><input class="note"></div></div><div class="checks"><label><input class="nonupper" type="checkbox">非上層木</label><label><input class="deadwood" type="checkbox">枯損木</label><label>境界木 <select class="boundary" style="width:70px"><option value="">なし</option><option>+</option><option>-</option></select></label></div>';
+if(!rep)d.querySelector('button').onclick=()=>d.remove();return d}
+for(let i=1;i<=12;i++)$('reps').appendChild(makeTree(i,true));
+$('add').onclick=()=>{treeCount++;$('trees').appendChild(makeTree(treeCount+12,false))};
+function trees(root){return Array.from($(root).children).map(d=>({number:d.querySelector('.treehead b').textContent,species:d.querySelector('input[type=radio]:checked')?.value||'',otherSpecies:d.querySelector('.other').value,dbh:d.querySelector('.dbh').value,height1:d.querySelector('.h1')?.value||'',height2:d.querySelector('.h2')?.value||'',clearHeight1:d.querySelector('.c1')?.value||'',clearHeight2:d.querySelector('.c2')?.value||'',note:d.querySelector('.note').value,nonUpper:d.querySelector('.nonupper').checked,deadwood:d.querySelector('.deadwood').checked,boundary:d.querySelector('.boundary').value}))}
+function collect(){return {plotId:$('plotId').value,date:$('date').value,lat:$('lat').value,lon:$('lon').value,memo:$('memo').value,environment:Object.fromEntries(['thinning','pest','dead','bending','deer'].map(k=>[k,$(k).value])),photos:Object.fromEntries(photoTypes.map(([k])=>[k,!!photoState[k]])),representatives:trees('reps'),trees:trees('trees'),savedAt:new Date().toISOString()}}
+$('save').onclick=()=>{if(!$('plotId').value.trim()){alert('プロット番号を入力してください');return}localStorage.setItem('forest_v3_'+id(),JSON.stringify(collect()));$('status').textContent='✓ 端末内に保存しました'};
+$('export').onclick=()=>{const data=collect();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(id()||'plot')+'_data.json';a.click();URL.revokeObjectURL(a.href)};
+drawPhotos();
+})();
 </script></body></html>
