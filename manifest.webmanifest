@@ -1,1 +1,27 @@
-{"name":"森林標準地調査","short_name":"森林調査","start_url":"./index.html","display":"standalone"}
+{
+  "id": "./",
+  "name": "森林調査 野帳入力",
+  "short_name": "森林調査野帳",
+  "description": "森林調査の野帳入力用アプリ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f7f5",
+  "theme_color": "#1f513b",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
