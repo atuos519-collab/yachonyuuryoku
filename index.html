@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f513b">
+<title>森林調査 野帳入力</title>
+<style>
+:root{--green:#1f513b;--green2:#e8f2ec;--line:#d8e0da;--bg:#f5f7f5;--text:#17221b;--muted:#5c6b61;--warn:#8a4b00;--warnbg:#fff3d9;--red:#9b2525}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:var(--bg);line-height:1.45}
+header{background:var(--green);color:white;padding:18px 16px 14px;position:sticky;top:0;z-index:5}header h1{font-size:20px;margin:0 0 4px}header p{margin:0;font-size:12px;opacity:.9}
+nav{display:flex;gap:6px;overflow:auto;padding:10px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:74px;z-index:4}
+nav button{white-space:nowrap;border:1px solid var(--line);background:white;color:var(--text);border-radius:999px;padding:8px 12px;font-size:13px}nav button.active{background:var(--green);color:white;border-color:var(--green)}
+main{max-width:1000px;margin:auto;padding:14px}section{display:none}section.active{display:block}.card{background:white;border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 12px;box-shadow:0 1px 2px #00000008}
+h2{font-size:18px;margin:0 0 12px}h3{font-size:15px;margin:0 0 8px}.hint{font-size:12px;color:var(--muted);margin:5px 0 0}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid.one{grid-template-columns:1fr}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}input,select,textarea{font:inherit;width:100%;border:1px solid #b9c6bc;border-radius:8px;padding:10px;background:white;color:var(--text);min-width:0}textarea{min-height:76px;resize:vertical}input[type=checkbox]{width:auto;transform:scale(1.15);margin-right:7px}input[type=file]{font-size:12px;padding:7px}
+button{font:inherit;cursor:pointer}.btn{border:1px solid var(--line);background:white;color:var(--text);border-radius:9px;padding:10px 12px}.btn.primary{background:var(--green);color:white;border-color:var(--green)}.btn.warn{color:var(--warn);border-color:#d9b46b;background:var(--warnbg)}.btn.danger{color:var(--red);border-color:#e5b7b7}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.actions .btn{flex:1}
+.status{padding:10px;border-radius:9px;background:var(--green2);font-size:13px;margin-bottom:10px}.status.warn{background:var(--warnbg);color:var(--warn)}
+.item{border:1px solid var(--line);border-radius:10px;padding:11px;margin:8px 0;background:white}.itemtop{display:flex;gap:10px;align-items:center;justify-content:space-between}.tag{font-size:11px;border-radius:99px;padding:4px 8px;background:var(--green2);color:var(--green);white-space:nowrap}.tag.warn{background:var(--warnbg);color:var(--warn)}
+.treeflags{margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:10px}.treeflags .grid{margin-top:8px}.treeflags label{font-weight:500}.treegrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.treegrid label{font-size:12px}
+.small{font-size:12px;color:var(--muted)}.empty{color:var(--muted);text-align:center;padding:20px 8px}
+footer{max-width:1000px;margin:auto;padding:0 14px 30px;color:var(--muted);font-size:12px}
+dialog{border:0;border-radius:14px;padding:0;width:min(92vw,540px);box-shadow:0 15px 50px #0004}dialog::backdrop{background:#0006}.modalhead{padding:14px;background:var(--green);color:white}.modalbody{padding:14px;max-height:65vh;overflow:auto}.modalfoot{padding:12px;display:flex;gap:8px;border-top:1px solid var(--line)}.modalfoot button{flex:1}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.treegrid{grid-template-columns:1fr 1fr}header{position:static}nav{top:0}.actions .btn{min-width:120px}}
+</style>
+
+<meta name="theme-color" content="#1f513b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="森林調査野帳">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+
+</head>
+<body>
+<header><h1>森林調査 野帳入力</h1><p>試作版 — 入力データはこの端末のブラウザに保存されます</p></header>
+<nav>
+<button class="active" data-tab="basic">基本情報</button><button data-tab="photos">写真・取得確認</button><button data-tab="environment">林内環境</button><button data-tab="reps">代表木・樹高</button><button data-tab="trees">樹木計測</button><button data-tab="export">保存・書き出し</button>
+</nav>
+<main>
+<section id="basic" class="active">
+<div class="card"><h2>1. プロット基本情報</h2>
+<div class="grid">
+<div><label for="plotId">プロットID *</label><input id="plotId" placeholder="例：390410"></div>
+<div><label for="date">調査日</label><input id="date" type="date"></div>
+<div><label for="team">調査者</label><input id="team" placeholder="調査者名"></div>
+<div><label for="location">場所・備考</label><input id="location" placeholder="任意"></div>
+<div><label for="lat">緯度（任意）</label><input id="lat" inputmode="decimal" placeholder="例：36.123456"></div>
+<div><label for="lon">経度（任意）</label><input id="lon" inputmode="decimal" placeholder="例：138.123456"></div>
+</div><div class="item"><strong>座標取得確認</strong><p class="hint">別端末などで座標を取得したら、チェックを入れてください。緯度・経度の数値入力は任意です。</p><label class="checkline"><input type="checkbox" id="coordinateAcquired"> 座標取得済み</label></div>
+</div>
+<div class="card"><h2>入力状況</h2><div id="progressSummary" class="status">データを読み込み中…</div><div class="actions"><button class="btn primary" id="saveTop">保存</button><button class="btn" id="validateTop">未入力項目を確認</button></div></div>
+</section>
+<section id="photos">
+<div class="card"><h2>2. 写真・取得確認</h2><p class="hint">撮影自体はカメラ等で行い、撮影済みチェックと必要なファイルを記録します。写真ファイルは書き出しデータに埋め込まれません。</p>
+<div id="photoRows"></div>
+<div class="grid one"><div><label for="photoNotes">写真メモ</label><textarea id="photoNotes" placeholder="撮影に関するメモ"></textarea></div></div>
+</div></section>
+<section id="environment">
+<div class="card"><h2>3. 林内環境</h2><p class="hint">調査要領に合わせて項目名や選択肢を調整してください。必須設定の項目は保存時の未入力チェック対象です。</p>
+<div class="grid">
+<div><label for="slope">傾斜（度）</label><input id="slope" type="number" min="0" max="90" placeholder="度"></div>
+<div><label for="aspect">斜面方位</label><select id="aspect"><option value="">選択</option><option>N</option><option>NE</option><option>E</option><option>SE</option><option>S</option><option>SW</option><option>W</option><option>NW</option><option>平坦</option></select></div>
+</div>
+<div class="item"><h3>林内環境の確認項目</h3><p class="hint">該当する項目にチェックしてください。未チェックは「該当なし」として扱います。</p><div class="grid">
+<label><input type="checkbox" id="envThinning"> 間伐</label><label><input type="checkbox" id="envPest"> 病虫害</label><label><input type="checkbox" id="envDeadwood"> 枯損木</label><label><input type="checkbox" id="envBentRoot"> 根曲がり</label><label><input type="checkbox" id="envDeer"> シカ痕跡</label>
+</div></div>
+<div class="item"><h3>林分の階層構造</h3><div class="grid">
+<div><label for="canopyHeight">高木層：高さ（m）</label><input id="canopyHeight" type="number" step="0.1" placeholder="高さ"></div><div><label for="canopyCover">高木層：被度（%）</label><input id="canopyCover" type="number" min="0" max="100" placeholder="被度"></div>
+<div><label for="subcanopyHeight">亜高木層：高さ（m）</label><input id="subcanopyHeight" type="number" step="0.1" placeholder="高さ"></div><div><label for="subcanopyCover">亜高木層：被度（%）</label><input id="subcanopyCover" type="number" min="0" max="100" placeholder="被度"></div>
+<div><label for="shrubHeight">低木層：高さ（m）</label><input id="shrubHeight" type="number" step="0.1" placeholder="高さ"></div><div><label for="shrubCover">低木層：被度（%）</label><input id="shrubCover" type="number" min="0" max="100" placeholder="被度"></div>
+<div><label for="herbHeight">草本層：高さ（m）</label><input id="herbHeight" type="number" step="0.1" placeholder="高さ"></div><div><label for="herbCover">草本層：被度（%）</label><input id="herbCover" type="number" min="0" max="100" placeholder="被度"></div>
+</div></div>
+<div class="item"><h3>下層植生（樹種・植物名 3種）</h3><div class="grid"><div><label for="understory1">下層植生 1</label><input id="understory1" placeholder="植物名"></div><div><label for="understory2">下層植生 2</label><input id="understory2" placeholder="植物名"></div><div><label for="understory3">下層植生 3</label><input id="understory3" placeholder="植物名"></div></div></div>
+<div class="grid one" style="margin-top:10px"><div><label for="envNotes">林内環境メモ</label><textarea id="envNotes"></textarea></div></div>
+</div></section>
+<section id="reps">
+<div class="card"><h2>4. 代表木（No.1〜12）</h2><p class="hint">代表木No.1〜12の入力欄は最初から固定表示です。樹木計測で標準的な樹木を選定した順に、代表木No.1〜12の固定枠へ情報を転記します。樹木計測の入力欄はNo.13、No.14、No.15……と追加します。各象限から3本ずつ選ぶ制約はありません。</p>
+<div id="repSummary" class="status"></div><div id="repList"></div><div class="item" style="margin-top:16px"><h3>追加の樹高計測（代表木12本とは別枠）</h3><p class="hint">樹木計測No.13以降など、代表木12枠とは別に樹高を追加で記録します。追加した計測は代表木12本の枠には含まれません。</p><div class="actions"><button class="btn primary" id="addExtraHeight">＋ 樹高追加計測</button></div><div id="extraHeightList"></div></div>
+</div></section>
+<section id="trees">
+<div class="card"><h2>5. 樹木計測</h2><p class="hint">代表木に選定する樹木も含めて計測順に登録します。追加欄はNo.13から始まり、No.14、No.15……と増えていきます。</p>
+<div class="item" style="margin:12px 0"><strong>入力方法</strong><p class="hint">計測順に樹木を追加します。各樹木の象限はその樹木の入力欄で設定してください。新しい樹木には、直前の樹木の象限が自動で引き継がれます。標準的な樹木を代表木に選ぶ場合は、その樹木の「代表木枠に転記」を押してください。標準的な樹木を選定した順に、代表木No.1〜12の空き枠へ追加します。</p></div>
+<div class="actions"><button class="btn primary" id="addTree">＋ 樹木計測項目を追加</button><button class="btn" id="treeCsv">樹木一覧CSV</button></div>
+<div id="treeList"></div>
+</div></section>
+<section id="export">
+<div class="card"><h2>6. 保存・書き出し</h2><div id="warningBox"></div>
+<div class="actions"><button class="btn primary" id="saveBtn">保存</button><button class="btn" id="jsonBtn">全データをJSON出力</button><button class="btn" id="csvBtn">樹木データをCSV出力</button></div>
+<div class="actions"><button class="btn" id="loadBtn">JSONを読み込む</button><button class="btn danger" id="resetBtn">この端末のデータを初期化</button><input type="file" id="jsonFile" accept=".json,application/json" hidden></div>
+<p class="hint">保存先は現在使用しているブラウザ内です。ブラウザのデータ消去や端末変更に備え、JSONを定期的に書き出してください。これは試作版です。公式成果の項目・様式と照合してから本番利用してください。</p>
+</div></section>
+</main>
+<footer>試作版：必須項目や林内環境の詳細は、実際の調査要領に合わせて確認・調整が必要です。</footer>
+<dialog id="swapDialog"><div class="modalhead"><strong>代表木と計測木を入れ替える</strong></div><div class="modalbody"><p id="swapIntro"></p><label for="swapTarget">入れ替え先の樹木（代表木以外）</label><select id="swapTarget"></select><div style="margin-top:10px"><label for="swapReason">変更理由 *</label><select id="swapReason"><option value="">選択してください</option><option>対象木として不適切</option><option>枯損・損傷等</option><option>樹種の誤同定</option><option>樹高計測上の支障</option><option>その他</option></select></div><div style="margin-top:10px"><label for="swapNote">補足（任意）</label><textarea id="swapNote"></textarea></div><p class="hint">確定すると、代表木のと入れ替え先の・樹木データが交換されます。変更前のデータは履歴に残ります。</p></div><div class="modalfoot"><button class="btn" id="swapCancel">キャンセル</button><button class="btn primary" id="swapConfirm">入れ替えを確定</button></div></dialog>
+<script>
+const STORAGE_KEY='forest_field_notebook_v2';
+const photoDefs=[['north','N方向写真'],['east','E方向写真'],['south','S方向写真'],['west','W方向写真'],['overall','全景写真']];
+const animalPhotoDefs=[['animal1','動物情報写真 1'],['animal2','動物情報写真 2'],['animal3','動物情報写真 3']];
+const treeFields=[['species','樹種'],['dbh','胸高直径（cm）'],['height','樹高（m）'],['quadrant','象限'],['status','状態・備考']];
+let data=loadData(), swapRepIndex=null;
+function blankData(){return {version:3,basic:{plotId:'',date:'',team:'',location:'',lat:'',lon:'',coordinatesAcquired:false},photos:{north:false,east:false,south:false,west:false,overall:false,zenith:false,animal1:false,animal2:false,animal3:false,notes:''},environment:{slope:'',aspect:'',features:{thinning:false,pest:false,deadwood:false,bentRoot:false,deer:false},strata:{canopyHeight:'',canopyCover:'',subcanopyHeight:'',subcanopyCover:'',shrubHeight:'',shrubCover:'',herbHeight:'',herbCover:''},understory1:'',understory2:'',understory3:'',notes:''},trees:[],representatives:[],additionalHeightMeasurements:[],history:[],currentQuadrant:'',quadrantTransitions:[]};}
+function loadData(){try{const x=JSON.parse(localStorage.getItem(STORAGE_KEY));if(x&&Array.isArray(x.trees)&&Array.isArray(x.representatives)){const d=blankData();d.basic={...d.basic,...(x.basic||{})};d.photos={...d.photos,...(x.photos||{})};d.environment={...d.environment,...(x.environment||{})};if(x.environment&&x.environment.features)d.environment.features={...d.environment.features,...x.environment.features};if(x.environment&&x.environment.strata)d.environment.strata={...d.environment.strata,...x.environment.strata};d.trees=x.trees.map((t,i)=>({...t,no:13+i}));d.representatives=x.representatives;d.additionalHeightMeasurements=Array.isArray(x.additionalHeightMeasurements)?x.additionalHeightMeasurements:[];d.history=x.history||[];d.currentQuadrant=x.currentQuadrant||'';d.quadrantTransitions=Array.isArray(x.quadrantTransitions)?x.quadrantTransitions:[];return d;}}catch(e){}return blankData();}
+function persist(){collectFields();localStorage.setItem(STORAGE_KEY,JSON.stringify(data));updateSummary();return true;}
+function collectFields(){for(const k of ['plotId','date','team','location','lat','lon']){const el=document.getElementById(k);if(el)data.basic[k]=el.value;}const cb=document.getElementById('coordinateAcquired');if(cb)data.basic.coordinatesAcquired=cb.checked;
+ const envIds=['slope','aspect','understory1','understory2','understory3','envNotes'];for(const id of envIds){const el=document.getElementById(id);if(el)data.environment[id==='envNotes'?'notes':id]=el.value;}
+ const featureIds={envThinning:'thinning',envPest:'pest',envDeadwood:'deadwood',envBentRoot:'bentRoot',envDeer:'deer'};for(const [id,k] of Object.entries(featureIds)){const el=document.getElementById(id);if(el)data.environment.features[k]=!!el?.checked;}
+ for(const id of Object.keys(data.environment.strata)){const el=document.getElementById(id);if(el)data.environment.strata[id]=el.value;}
+ const pn=document.getElementById('photoNotes');if(pn)data.photos.notes=pn.value;}
+function setFields(){for(const [k,v] of Object.entries(data.basic)){const el=document.getElementById(k);if(el&&typeof v!=='object')el.value=v||'';}const coordinateCheckbox=document.getElementById('coordinateAcquired');if(coordinateCheckbox)coordinateCheckbox.checked=!!data.basic.coordinatesAcquired;for(const id of ['slope','aspect','understory1','understory2','understory3']){const el=document.getElementById(id);if(el)el.value=data.environment[id]||'';}document.getElementById('envNotes').value=data.environment.notes||'';for(const [id,k] of Object.entries({envThinning:'thinning',envPest:'pest',envDeadwood:'deadwood',envBentRoot:'bentRoot',envDeer:'deer'})){const el=document.getElementById(id);if(el)el.checked=!!data.environment.features[k];}for(const [id,v] of Object.entries(data.environment.strata||{})){const el=document.getElementById(id);if(el)el.value=v||'';}document.getElementById('photoNotes').value=data.photos.notes||'';updateCoordinateStatus();}
+function updateCoordinateStatus(){const el=document.getElementById('coordinateAcquired');if(el){el.checked=!!data.basic.coordinatesAcquired;}}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function nextNo(){return Math.max(12,data.trees.reduce((m,t)=>Math.max(m,t.no),12))+1;}
+function treeById(id){return data.trees.find(t=>t.uid===id);}
+function ensureRepSlots(){const old=Array.isArray(data.representatives)?data.representatives:[];data.representatives=Array.from({length:12},(_,i)=>old[i]&&old[i].uid?old[i]:{uid:'',selectedAt:'',species:'',dbh:'',height:'',height2:'',crownBaseHeight:'',crownBaseHeight2:'',note:''});}
+function repIndexFor(uid){return data.representatives.findIndex(r=>r&&r.uid===uid);}
+function renderPhotos(){
+ const cameraCard=([k,label])=>`<div class="item"><div class="itemtop"><strong>${label}</strong><span class="tag ${data.photos[k]?'':'warn'}">${data.photos[k]?'撮影済み':'未撮影'}</span></div><p class="hint">撮影ボタンを押すとカメラが開きます。撮影後、写真ファイルを端末に保存します。</p><label class="btn primary" style="display:block;text-align:center;margin-top:9px">📷 ${label}を撮影<input type="file" accept="image/*" capture="environment" data-camera="${k}" style="display:none"></label></div>`;
+ const panorama=`<div class="item"><div class="itemtop"><strong>全天球写真</strong><span class="tag ${data.photos.zenith?'':'warn'}">${data.photos.zenith?'取得済み':'未取得'}</span></div><label style="margin-top:9px;font-weight:500"><input type="checkbox" data-photo="zenith" ${data.photos.zenith?'checked':''}> 全天球写真を取得済みにする</label></div>`;
+ const animals=animalPhotoDefs.map(([k,label])=>`<div class="item"><div class="itemtop"><strong>${label}（任意）</strong><span class="tag ${data.photos[k]?'':'warn'}">${data.photos[k]?'撮影済み':'未撮影'}</span></div><label class="btn" style="display:block;text-align:center;margin-top:9px">📷 ${label}を撮影<input type="file" accept="image/*" capture="environment" data-camera="${k}" style="display:none"></label></div>`).join('');
+ document.getElementById('photoRows').innerHTML='<h3>撮影する写真</h3>'+photoDefs.map(cameraCard).join('')+panorama+'<h3 style="margin-top:16px">動物情報の写真（任意・3枚まで）</h3>'+animals;
+ document.querySelectorAll('[data-photo]').forEach(el=>el.onchange=()=>{data.photos[el.dataset.photo]=el.checked;persist();renderPhotos();});
+ document.querySelectorAll('[data-camera]').forEach(el=>el.onchange=()=>{const f=el.files&&el.files[0];if(!f)return;const k=el.dataset.camera;data.photos[k]=true;persist();renderPhotos();const ext=(f.name.match(/\.([a-zA-Z0-9]+)$/)||[])[1]||'jpg';const name=`${data.basic.plotId||'ID'}_${k.toUpperCase()}.${ext}`;const url=URL.createObjectURL(f);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);alert(`撮影済みにしました。写真の保存名：${name}\n端末によっては保存先の確認が必要です。`);});
+}
+function renderTrees(){const root=document.getElementById('treeList');if(!data.trees.length){root.innerHTML='<div class="empty">樹木計測データはまだありません。「樹木計測項目を追加」からNo.13以降を入力してください。</div>';return;}root.innerHTML=data.trees.map(t=>{const ri=repIndexFor(t.uid);const canSelect=data.representatives.some(r=>!r||(!r.uid&&!r.species&&!r.dbh&&!r.height));return `<div class="item"><div class="itemtop"><strong> No.${t.no} ${esc(t.species||'樹種未入力')}</strong><span class="tag">樹木計測木</span></div><div class="treegrid"><div><label>樹種 *</label><input data-tree="${t.uid}" data-field="species" value="${esc(t.species)}" placeholder="樹種名"></div><div><label>胸高直径（cm） *</label><input data-tree="${t.uid}" data-field="dbh" value="${esc(t.dbh)}" inputmode="decimal" placeholder="cm"></div><div><label>象限</label><select data-tree="${t.uid}" data-field="quadrant"><option value="">未設定</option>${['第1象限','第2象限','第3象限','第4象限'].map(q=>`<option value="${q}" ${t.quadrant===q?'selected':''}>${q}</option>`).join('')}</select><p class="hint">次に追加する樹木にも、この樹木の象限が引き継がれます。</p></div><div><label>状態・備考</label><input data-tree="${t.uid}" data-field="status" value="${esc(t.status||'')}" placeholder="任意"></div></div><div class="treeflags"><strong>樹木の確認項目</strong><div class="grid"><label><input type="checkbox" data-tree="${t.uid}" data-field="boundaryTree" ${t.boundaryTree?'checked':''}> 境界木</label><label><input type="checkbox" data-tree="${t.uid}" data-field="deadTree" ${t.deadTree?'checked':''}> 枯損木</label><label><input type="checkbox" data-tree="${t.uid}" data-field="brokenTree" ${t.brokenTree?'checked':''}> 折損木</label><label><input type="checkbox" data-tree="${t.uid}" data-field="bentRoot" ${t.bentRoot?'checked':''}> 根曲がり</label><label><input type="checkbox" data-tree="${t.uid}" data-field="deerBark" ${t.deerBark?'checked':''}> シカ剥皮</label><label><input type="checkbox" data-tree="${t.uid}" data-field="bearBark" ${t.bearBark?'checked':''}> クマ剥皮</label></div></div><div class="actions">${ri<0?`<button class="btn primary" data-select-rep="${t.uid}" ${canSelect?'':'disabled'}>代表木枠に転記</button>`:`<span class="small">代表木 No.${ri+1} の元データ</span>`}<button class="btn danger" data-delete="${t.uid}">削除</button></div></div>`;}).join('');
+root.querySelectorAll('[data-tree]').forEach(el=>el.addEventListener('change',()=>{const t=treeById(el.dataset.tree);if(t){t[el.dataset.field]=el.type==='checkbox'?el.checked:el.value;persist();renderTrees();renderReps();renderAdditionalHeights();updateSummary();renderWarnings();}}));
+root.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>deleteTree(b.dataset.delete));
+root.querySelectorAll('[data-select-rep]').forEach(b=>b.onclick=()=>selectRepresentative(b.dataset.selectRep));}
+function selectRepresentative(uid){ensureRepSlots();const existing=repIndexFor(uid);if(existing>=0){alert(`この樹木はすでに代表木 No.${existing+1} の元データです。`);return;}const slot=data.representatives.findIndex(r=>!r||(!r.uid&&!r.species&&!r.dbh&&!r.height));if(slot<0){alert('代表木12枠はすべて使用中です。');return;}const t=treeById(uid);if(!t)return;data.representatives[slot]={uid,selectedAt:new Date().toISOString(),species:t.species||'',dbh:t.dbh||'',height:t.height||'',crownBaseHeight:'',note:''};data.history.push({at:new Date().toISOString(),action:'樹木計測中に代表木枠へ転記',repNo:slot+1,treeNo:t.no,uid,quadrant:t.quadrant||''});persist();renderAll();alert(`樹木計測 No.${t.no} の情報を固定枠「代表木 No.${slot+1}」へ転記しました。`);}
+function renderReps(){ensureRepSlots();const root=document.getElementById('repList');const selected=data.representatives.filter(r=>r&&r.uid).length;document.getElementById('repSummary').textContent=`代表木 ${selected}/12 枠に入力済み`;root.innerHTML=Array.from({length:12},(_,i)=>{const r=data.representatives[i]||{uid:'',species:'',dbh:'',height:'',height2:'',crownBaseHeight:'',crownBaseHeight2:'',note:''};const t=r.uid?treeById(r.uid):null;return `<div class="item"><div class="itemtop"><strong>代表木 No.${i+1}</strong><span class="tag ${r.uid?'':'warn'}">${r.uid?'樹木計測 No.'+(t?.no??'不明')+' から転記':'未入力'}</span></div><div class="treegrid"><div><label>樹種</label><input data-repfield="${i}" data-field="species" value="${esc(r.species||t?.species||'')}" placeholder="樹種名"></div><div><label>胸高直径（cm）</label><input data-repfield="${i}" data-field="dbh" value="${esc(r.dbh||t?.dbh||'')}" inputmode="decimal" placeholder="cm"></div><div><label>樹高（m）1回目 *</label><input data-repfield="${i}" data-field="height" value="${esc(r.height||'')}" inputmode="decimal" placeholder="1回目"></div><div><label>樹高（m）2回目 *</label><input data-repfield="${i}" data-field="height2" value="${esc(r.height2||'')}" inputmode="decimal" placeholder="2回目"></div><div><label>枝下高（m）1回目</label><input data-repfield="${i}" data-field="crownBaseHeight" value="${esc(r.crownBaseHeight||'')}" inputmode="decimal" placeholder="1回目"></div><div><label>枝下高（m）2回目</label><input data-repfield="${i}" data-field="crownBaseHeight2" value="${esc(r.crownBaseHeight2||'')}" inputmode="decimal" placeholder="2回目"></div></div><div class="treeflags" style="margin-top:10px"><strong>代表木の確認項目</strong><div class="grid"><label><input type="checkbox" data-repfield="${i}" data-field="boundaryTree" ${r.boundaryTree?'checked':''}> 境界木</label><label><input type="checkbox" data-repfield="${i}" data-field="bentRoot" ${r.bentRoot?'checked':''}> 根曲がり</label><label><input type="checkbox" data-repfield="${i}" data-field="deerBark" ${r.deerBark?'checked':''}> シカ剥皮</label><label><input type="checkbox" data-repfield="${i}" data-field="bearBark" ${r.bearBark?'checked':''}> クマ剥皮</label></div></div><div style="margin-top:8px"><label>備考</label><input data-repfield="${i}" data-field="note" value="${esc(r.note||'')}" placeholder="任意"></div><div class="actions">${r.uid?`<button class="btn" data-unlink-rep="${i}">元の樹木計測木との紐付けを解除</button>`:''}</div></div>`;}).join('');
+root.querySelectorAll('[data-repfield]').forEach(el=>el.onchange=()=>{const i=Number(el.dataset.repfield);if(!data.representatives[i])data.representatives[i]={uid:'',selectedAt:'',species:'',dbh:'',height:'',height2:'',crownBaseHeight:'',crownBaseHeight2:'',note:''};data.representatives[i][el.dataset.field]=el.type==='checkbox'?el.checked:el.value;persist();updateSummary();renderWarnings();});
+root.querySelectorAll('[data-unlink-rep]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.unlinkRep);data.history.push({at:new Date().toISOString(),action:'代表木枠と樹木計測木の紐付け解除',repNo:i+1,uid:data.representatives[i].uid});data.representatives[i].uid='';persist();renderAll();});}
+function renderAdditionalHeights(){
+ const root=document.getElementById('extraHeightList');
+ if(!root)return;
+ const eligible=data.trees.filter(t=>t.no>=13&&repIndexFor(t.uid)<0);
+ if(!data.additionalHeightMeasurements)data.additionalHeightMeasurements=[];
+ data.additionalHeightMeasurements=data.additionalHeightMeasurements.filter(m=>treeById(m.uid));
+ root.innerHTML=data.additionalHeightMeasurements.length?data.additionalHeightMeasurements.map((m,i)=>{
+ const t=treeById(m.uid);
+ const options=eligible.map(x=>`<option value="${x.uid}" ${x.uid===m.uid?'selected':''}>樹木計測 No.${x.no} — ${esc(x.species||'樹種未入力')}</option>`).join('');
+ return `<div class="item"><div class="grid"><div><label>対象木</label><select data-extra-tree="${i}">${options||'<option value="">対象木なし</option>'}</select></div><div><label>追加樹高（m）</label><input data-extra-height="${i}" value="${esc(m.height||'')}" inputmode="decimal" placeholder="樹高を入力"></div></div><div class="actions"><button class="btn danger" data-extra-remove="${i}">この計測欄を削除</button></div></div>`;
+ }).join(''):'<p class="small">追加計測欄はありません。「樹高追加計測」を押して欄を追加してください。</p>';
+ root.querySelectorAll('[data-extra-tree]').forEach(el=>el.onchange=()=>{const i=Number(el.dataset.extraTree);const uid=el.value;if(data.additionalHeightMeasurements.some((m,j)=>j!==i&&m.uid===uid)){alert('同じ樹木はすでに追加計測欄に登録されています。');renderAdditionalHeights();return;}data.additionalHeightMeasurements[i].uid=uid;persist();renderAdditionalHeights();});
+ root.querySelectorAll('[data-extra-height]').forEach(el=>el.onchange=()=>{data.additionalHeightMeasurements[Number(el.dataset.extraHeight)].height=el.value;persist();});
+ root.querySelectorAll('[data-extra-remove]').forEach(el=>el.onclick=()=>{data.additionalHeightMeasurements.splice(Number(el.dataset.extraRemove),1);persist();renderAdditionalHeights();});
+}
+function addAdditionalHeight(){
+ if(!data.additionalHeightMeasurements)data.additionalHeightMeasurements=[];
+ const eligible=data.trees.filter(t=>t.no>=13&&repIndexFor(t.uid)<0&&!data.additionalHeightMeasurements.some(m=>m.uid===t.uid));
+ if(!eligible.length){alert('追加計測できる樹木がありません。樹木計測No.13以降の樹木を登録し、代表木以外の樹木を対象にしてください。');return;}
+ data.additionalHeightMeasurements.push({uid:eligible[0].uid,height:''});persist();renderAdditionalHeights();
+ const root=document.getElementById('extraHeightList');if(root)root.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function openSwap(repIndex){ensureRepSlots();if(!data.representatives[repIndex]||!data.representatives[repIndex].uid){alert('この代表木枠は未選定です。先に代表木を選定してください。');return;}swapRepIndex=repIndex;const old=treeById(data.representatives[repIndex].uid);document.getElementById('swapIntro').textContent=`代表木 No.${repIndex+1}（樹木計測 No.${old?.no} ${old?.species||'樹種未入力'}）と、代表木以外の計測木を入れ替えます。`;const opts=data.trees.filter(t=>repIndexFor(t.uid)<0);document.getElementById('swapTarget').innerHTML=opts.map(t=>`<option value="${t.uid}">樹木計測 No.${t.no} — ${t.species||'樹種未入力'}（胸高直径 ${t.dbh||'未入力'}）</option>`).join('');document.getElementById('swapReason').value='';document.getElementById('swapNote').value='';if(!opts.length){alert('入れ替え先となる代表木以外の計測木がありません。先に樹木計測の樹木を登録してください。');return;}document.getElementById('swapDialog').showModal();}
+function confirmSwap(){ensureRepSlots();const i=swapRepIndex,rep=data.representatives[i],newUid=document.getElementById('swapTarget').value,reason=document.getElementById('swapReason').value,note=document.getElementById('swapNote').value;if(!newUid||!reason){alert('入れ替え先と変更理由を選択してください。');return;}const old=treeById(rep.uid),next=treeById(newUid);if(!old||!next)return;const oldNo=old.no,newNo=next.no;const snapshotOld=JSON.parse(JSON.stringify(old)),snapshotNew=JSON.parse(JSON.stringify(next));const tmp=old.no;old.no=next.no;next.no=tmp;rep.uid=next.uid;rep.selectedAt=new Date().toISOString();data.history.push({at:new Date().toISOString(),action:'代表木と計測木を番号ごと交換',repNo:i+1,oldTreeBefore:snapshotOld,newTreeBefore:snapshotNew,oldNo,newNo,reason,note});persist();document.getElementById('swapDialog').close();renderAll();alert(`代表木 No.${i+1} を入れ替えました。樹木データとを交換しました。`);}
+function deleteTree(uid){const t=treeById(uid);if(!t)return;if(repIndexFor(uid)>=0){alert('代表木に選定されている樹木は削除できません。先に計測木と入れ替えてください。');return;}if(!confirm(`樹木計測 No.${t.no}（${t.species||'樹種未入力'}）を削除しますか？`))return;data.history.push({at:new Date().toISOString(),action:'樹木削除',tree:JSON.parse(JSON.stringify(t))});data.trees=data.trees.filter(x=>x.uid!==uid);persist();renderAll();}
+function addTree(){const previous=data.trees.length?data.trees[data.trees.length-1]:null;const t={uid:'t_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),no:nextNo(),species:'',dbh:'',height:'',quadrant:previous?(previous.quadrant||''):'',status:'',boundaryTree:false,deadTree:false,brokenTree:false,bentRoot:false,deerBark:false,bearBark:false};data.trees.push(t);persist();renderAll();const el=document.querySelector(`[data-tree="${t.uid}"][data-field="species"]`);if(el)el.focus();}
+
+function renderQuadrantControls(){
+ const sel=document.getElementById('nextQuadrant'); if(sel)sel.value=data.currentQuadrant||'';
+ const label=document.getElementById('currentQuadrantLabel');if(label)label.textContent=data.currentQuadrant||'未設定';
+ const hist=document.getElementById('quadrantHistory');if(hist){const rows=data.quadrantTransitions||[];hist.innerHTML=rows.length?'<strong>象限切替履歴</strong><ul>'+rows.map(x=>`<li>樹木計測 No.${x.fromTreeNo} から ${esc(x.quadrant)}${x.previous?`（${esc(x.previous)}から切替）`:''}</li>`).join('')+'</ul>':'象限切替履歴はまだありません。';}
+}
+function applyQuadrant(){const q=document.getElementById('nextQuadrant').value;if(!q){alert('象限を選択してください。');return;}if(q===data.currentQuadrant){alert(`${q}はすでに設定されています。次に追加する樹木にもこの象限が適用されます。`);return;}const entry={at:new Date().toISOString(),fromTreeNo:nextNo(),previous:data.currentQuadrant||'',quadrant:q};data.currentQuadrant=q;data.quadrantTransitions=data.quadrantTransitions||[];data.quadrantTransitions.push(entry);data.history.push({...entry,action:'象限切替'});persist();renderTrees();alert(`樹木計測 No.${entry.fromTreeNo} から ${q} を適用します。以降に追加する樹木にも自動で適用されます。`);}
+
+function renderAll(){renderPhotos();renderTrees();renderReps();renderAdditionalHeights();updateSummary();renderWarnings();}
+function missingItems(){collectFields();const m=[];if(!data.basic.plotId.trim())m.push('プロットID');if(!data.basic.coordinatesAcquired)m.push('座標取得の確認');for(const [k,label] of photoDefs)if(!data.photos[k])m.push(label+'（取得・撮影確認）');// 林内環境のチェック項目・階層構造・下層植生は任意入力。未チェックは該当なしとして扱う。
+data.trees.forEach(t=>{if(!t.species.trim())m.push(`樹木計測 No.${t.no}：樹種`);if(!String(t.dbh).trim())m.push(`樹木計測 No.${t.no}：胸高直径`);});ensureRepSlots();for(let i=0;i<12;i++){const r=data.representatives[i]||{};if(!String(r.species||'').trim())m.push(`代表木 No.${i+1}：樹種未入力`);if(!String(r.dbh||'').trim())m.push(`代表木 No.${i+1}：胸高直径未入力`);if(!String(r.height||'').trim())m.push(`代表木 No.${i+1}：樹高未入力`);}return [...new Set(m)];}
+function renderWarnings(){const m=missingItems();const el=document.getElementById('warningBox');if(!el)return;el.innerHTML=m.length?`<div class="status warn"><strong>未入力・未取得の項目：${m.length}件</strong><ul>${m.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><p>任意項目は警告対象にしていません。確認後、そのまま保存することもできます。</p></div>`:'<div class="status">未入力・未取得の必須確認項目はありません。</div>';}
+function updateSummary(){const m=missingItems();const selected=(data.representatives||[]).filter(r=>r&&String(r.species||'').trim()).length;const el=document.getElementById('progressSummary');if(el)el.textContent=`樹木 ${data.trees.length}本／代表木 ${selected}/12本／未入力・未取得 ${m.length}件`;}
+function saveWithWarning(){const m=missingItems();if(m.length){const ok=confirm('未入力・未取得の項目があります：\n\n'+m.map(x=>'・'+x).join('\n')+'\n\nこのまま保存しますか？\n「キャンセル」で戻って確認できます。');if(!ok){renderWarnings();return;}}persist();renderWarnings();alert('この端末のブラウザに保存しました。バックアップとしてJSON書き出しも行ってください。');}
+function download(name,content,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function exportJSON(){collectFields();persist();download(`野帳_${data.basic.plotId||'未設定'}_${data.basic.date||'日付未設定'}.json`,JSON.stringify(data,null,2),'application/json;charset=utf-8');}
+function csvCell(v){return '"'+String(v??'').replace(/"/g,'""')+'"';}
+function exportCSV(){const rows=[['樹木計測No','代表木No','代表木選定','樹種','胸高直径cm','代表木樹高1回目m','代表木樹高2回目m','代表木枝下高1回目m','代表木枝下高2回目m','追加樹高計測m','象限','境界木','枯損木','折損木','根曲がり','シカ剥皮','クマ剥皮','代表木境界木','代表木根曲がり','代表木シカ剥皮','代表木クマ剥皮','状態・備考']];for(const t of data.trees){const ri=repIndexFor(t.uid);const extra=(data.additionalHeightMeasurements||[]).filter(m=>m.uid===t.uid).map(m=>m.height).join(' / ');const rep=ri>=0?data.representatives[ri]:null;rows.push([t.no,ri>=0?ri+1:'',ri>=0?'代表木':'',t.species,t.dbh,rep?.height||'',rep?.height2||'',rep?.crownBaseHeight||'',rep?.crownBaseHeight2||'',extra,t.quadrant,t.boundaryTree?'○':'',t.deadTree?'○':'',t.brokenTree?'○':'',t.bentRoot?'○':'',t.deerBark?'○':'',t.bearBark?'○':'',ri>=0&&data.representatives[ri].boundaryTree?'○':'',ri>=0&&data.representatives[ri].bentRoot?'○':'',ri>=0&&data.representatives[ri].deerBark?'○':'',ri>=0&&data.representatives[ri].bearBark?'○':'',t.status]);}download(`樹木一覧_${data.basic.plotId||'未設定'}.csv`,'\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8');}
+function validate(){renderWarnings();document.querySelector('[data-tab="export"]').click();document.getElementById('warningBox').scrollIntoView({behavior:'smooth',block:'start'});}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('main section').forEach(s=>s.classList.toggle('active',s.id===b.dataset.tab));if(b.dataset.tab==='export')renderWarnings();});
+document.getElementById('addTree').onclick=addTree;document.getElementById('addExtraHeight').onclick=addAdditionalHeight;document.getElementById('saveBtn').onclick=saveWithWarning;document.getElementById('saveTop').onclick=saveWithWarning;document.getElementById('validateTop').onclick=validate;document.getElementById('jsonBtn').onclick=exportJSON;document.getElementById('csvBtn').onclick=exportCSV;document.getElementById('treeCsv').onclick=exportCSV;document.getElementById('swapCancel').onclick=()=>document.getElementById('swapDialog').close();document.getElementById('swapConfirm').onclick=confirmSwap;
+document.getElementById('loadBtn').onclick=()=>document.getElementById('jsonFile').click();document.getElementById('jsonFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const x=JSON.parse(await f.text());if(!x||!Array.isArray(x.trees)||!Array.isArray(x.representatives)||!x.basic)throw new Error('形式が違います');if(!confirm('現在のデータを読み込むJSONの内容で置き換えます。よろしいですか？'))return;data=x;persist();setFields();renderAll();alert('読み込みました。');}catch(err){alert('JSONを読み込めませんでした。ファイルを確認してください。');}e.target.value='';};
+document.getElementById('resetBtn').onclick=()=>{if(confirm('このブラウザに保存した野帳データをすべて初期化します。事前にJSONを書き出しましたか？')&&confirm('本当に初期化しますか？この操作は取り消せません。')){data=blankData();localStorage.removeItem(STORAGE_KEY);setFields();renderAll();}};
+['plotId','date','team','location','lat','lon','slope','aspect','understory1','understory2','understory3','canopyHeight','canopyCover','subcanopyHeight','subcanopyCover','shrubHeight','shrubCover','herbHeight','herbCover','envNotes','photoNotes','envThinning','envPest','envDeadwood','envBentRoot','envDeer'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',()=>{collectFields();persist();renderWarnings();});});
+document.getElementById('coordinateAcquired').onchange=(e)=>{data.basic.coordinatesAcquired=e.target.checked;persist();renderWarnings();};
+setFields();renderAll();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.warn('オフライン機能の登録に失敗しました:', err);
+    });
+  });
+}
+</script>
+
+</body>
+</html>
