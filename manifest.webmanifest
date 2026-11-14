@@ -1,15 +1,15 @@
 {
   "id": "./",
   "name": "森林調査 野帳入力",
-  "short_name": "森林調査野帳",
-  "description": "森林調査の野帳入力用アプリ",
+  "short_name": "森林野帳",
+  "description": "森林調査のプロット・樹木データを入力する野帳アプリ",
+  "lang": "ja",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#f5f7f5",
   "theme_color": "#1f513b",
-  "lang": "ja",
   "icons": [
     {
       "src": "./icons/icon-192.png",
@@ -22,6 +22,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
