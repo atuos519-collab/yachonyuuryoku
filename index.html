@@ -116,7 +116,7 @@ dialog{border:0;border-radius:14px;padding:0;width:min(92vw,540px);box-shadow:0 
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script type="module" src="./exceljs-entry.js"></script>
 </head>
 <body>
 <div id="authGate">
@@ -349,6 +349,8 @@ async function restoreSingleProjectBackup(file, projectId){
 }
 function uid(prefix='id'){return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);}
 
+function displayBoundary(value){return value==='+'?'＋':(value==='-'?'－':'');}
+
 async function exportProjectExcel(project){
  if(!window.ExcelJS)throw new Error('Excel出力ライブラリを読み込めません。インターネット接続を確認してください。');
  const mode=project.surveyMode||'standard12';
@@ -490,7 +492,14 @@ async function exportProjectExcel(project){
   const firstTreeRow=targetStart+5;
   const pageIndex=Math.round((targetStart-(isAll?82:86))/40);
   const firstTreeNo=61+pageIndex*35;
-  for(let i=0;i<35;i++)ws.getCell('A'+(firstTreeRow+i)).value=firstTreeNo+i;
+  for(let i=0;i<35;i++){
+   const row=firstTreeRow+i;
+   ws.getCell('A'+row).value=firstTreeNo+i;
+   // Never carry measurements from the source page into a newly copied page.
+   ['B','H','U','Y','AC','AG','R','O','L','AK'].forEach(col=>{
+    ws.getCell(col+row).value='';
+   });
+  }
  }
  function ensureRowForNo(ws,no){
   let row;
@@ -596,7 +605,7 @@ async function exportProjectExcel(project){
   setCell(ws,'Y'+row,hideTreeHeight?'':(t.height2||''));
   setCell(ws,'AC'+row,hideCrownBaseHeight?'':(t.crownBaseHeight||''));
   setCell(ws,'AG'+row,hideCrownBaseHeight?'':(t.crownBaseHeight2||''));
-  setCell(ws,'R'+row,t.boundaryTree==='+'||t.boundaryTree==='-'?t.boundaryTree:'');
+  setCell(ws,'R'+row,displayBoundary(t.boundaryTree));
   putMark(ws,'O'+row,isDead);
   putMark(ws,'L'+row,isNonCanopy);
   setCell(ws,'AK'+row,notesFor(item,linkedTree));
@@ -613,6 +622,12 @@ async function exportProjectExcel(project){
   exportSheets.push(ws);
   fillCommon(ws,d,pl.plotId);
   const trees=Array.isArray(d.trees)?d.trees:[];
+  // Determine the required extent first and create all extra page blocks before
+  // writing any measured trees. This prevents copying populated rows (e.g. 50-60).
+  const registeredNos=trees.map(t=>Number(t.no)).filter(n=>Number.isFinite(n)&&n>0);
+  if(!isAllHeight) registeredNos.push(...Array.from({length:12},(_,i)=>i+1));
+  const maxRegisteredNo=registeredNos.length?Math.max(...registeredNos):0;
+  if(maxRegisteredNo>60) ensureRowForNo(ws,maxRegisteredNo);
   const reps=Array.isArray(d.representatives)?d.representatives:[];
   if(isAllHeight){
    trees.forEach(t=>{
@@ -627,7 +642,7 @@ async function exportProjectExcel(project){
     const merged={...(linked||{}),...(rep||{}),no,
      species:resolvedSpecies(rep,linked),
      dbh:rep?.dbh||linked?.dbh||'',
-     boundaryTree:rep?.boundaryTree||linked?.boundaryTree||'',
+     boundaryTree:displayBoundary(rep?.boundaryTree||linked?.boundaryTree||''),
      deadTree:!!(rep?.deadTree||linked?.deadTree),
      nonCanopy:!!(rep?.nonCanopy||linked?.nonCanopy),
      bentRoot:!!(rep?.bentRoot||linked?.bentRoot),
@@ -753,17 +768,32 @@ function treeById(id){return data.trees.find(t=>t.uid===id);}
 function ensureRepSlots(){const old=Array.isArray(data.representatives)?data.representatives:[];data.representatives=Array.from({length:12},(_,i)=>{const r=old[i];return r&&(r.uid||r.species||r.speciesGroup||r.dbh||r.height||r.height2||r.crownBaseHeight||r.crownBaseHeight2||r.note||r.quadrant||r.boundaryTree||r.bentRoot||r.deerBark||r.bearBark)?{boundaryTree:'',speciesGroup:'',...r}: {uid:'',selectedAt:'',species:'',speciesGroup:'',dbh:'',height:'',height2:'',crownBaseHeight:'',crownBaseHeight2:'',note:'',boundaryTree:'',bentRoot:false,deerBark:false,bearBark:false};});}
 function repIndexFor(uid){return data.representatives.findIndex(r=>r&&r.uid===uid);}
 function renderPhotos(){
- const cameraCard=([k,label])=>`<div class="item"><div class="itemtop"><strong>${label}</strong><span class="tag ${data.photos[k]?'':'warn'}">${data.photos[k]?'撮影済み':'未撮影'}</span></div><p class="hint">撮影ボタンを押すとカメラが開きます。撮影後、写真ファイルを端末に保存します。</p><label class="btn primary" style="display:block;text-align:center;margin-top:9px">📷 ${label}を撮影<input type="file" accept="image/*" capture="environment" data-camera="${k}" style="display:none"></label></div>`;
+ const cameraCard=([k,label])=>`<div class="item"><div class="itemtop"><strong>${label}</strong><span class="tag ${data.photos[k]?'':'warn'}">${data.photos[k]?'撮影済み':'未撮影'}</span></div><p class="hint">撮影後に写真を確認し、OKを押すと端末内に保存します。</p><button type="button" class="btn primary" data-camera-launch="${k}" style="display:block;width:100%;text-align:center;margin-top:9px">📷 ${label}を撮影</button><input type="file" accept="image/*" capture="environment" data-camera-file="${k}" style="display:none"></div>`;
  const panorama=`<div class="item"><div class="itemtop"><strong>全天球写真</strong><span class="tag ${data.photos.zenith?'':'warn'}">${data.photos.zenith?'取得済み':'未取得'}</span></div><label style="margin-top:9px;font-weight:500"><input type="checkbox" data-photo="zenith" ${data.photos.zenith?'checked':''}> 全天球写真を取得済みにする</label></div>`;
- const animals=animalPhotoDefs.map(([k,label])=>`<div class="item"><div class="itemtop"><strong>${label}（任意）</strong><span class="tag ${data.photos[k]?'':'warn'}">${data.photos[k]?'撮影済み':'未撮影'}</span></div><label class="btn" style="display:block;text-align:center;margin-top:9px">📷 ${label}を撮影<input type="file" accept="image/*" capture="environment" data-camera="${k}" style="display:none"></label></div>`).join('');
+ const animals=animalPhotoDefs.map(([k,label])=>`<div class="item"><div class="itemtop"><strong>${label}（任意）</strong><span class="tag ${data.photos[k]?'':'warn'}">${data.photos[k]?'撮影済み':'未撮影'}</span></div><button type="button" class="btn" data-camera-launch="${k}" style="display:block;width:100%;text-align:center;margin-top:9px">📷 ${label}を撮影</button><input type="file" accept="image/*" capture="environment" data-camera-file="${k}" style="display:none"></div>`).join('');
  document.getElementById('photoRows').innerHTML='<h3>撮影する写真</h3>'+photoDefs.map(cameraCard).join('')+panorama+'<h3 style="margin-top:16px">動物情報の写真（任意・3枚まで）</h3>'+animals;
  document.querySelectorAll('[data-photo]').forEach(el=>el.onchange=()=>{data.photos[el.dataset.photo]=el.checked;persist();renderPhotos();});
- document.querySelectorAll('[data-camera]').forEach(el=>el.onchange=()=>{
+ document.querySelectorAll('[data-camera-launch]').forEach(btn=>btn.onclick=()=>launchPhotoCamera(btn.dataset.cameraLaunch));
+ document.querySelectorAll('[data-camera-file]').forEach(el=>el.onchange=()=>{
   const f=el.files&&el.files[0];if(!f)return;
-  showPhotoConfirmation(f,el.dataset.camera,el);
+  showPhotoConfirmation(f,el.dataset.cameraFile,el,null);
  });
 }
-function showPhotoConfirmation(file,key,input){
+async function launchPhotoCamera(key){
+ const input=document.querySelector(`[data-camera-file="${key}"]`);
+ if(window.YachoNativePhoto?.isNative?.()){
+  try{
+   const captureResult=await window.YachoNativePhoto.capture();
+   if(captureResult)showPhotoConfirmation(captureResult.file,key,null,captureResult);
+  }catch(e){
+   if(String(e?.message||e).toLowerCase().includes('cancel'))return;
+   console.error(e);alert('カメラを起動できませんでした。\n'+(e?.message||e));
+  }
+  return;
+ }
+ if(input)input.click();
+}
+function showPhotoConfirmation(file,key,input,nativeCapture=null){
  const previewUrl=URL.createObjectURL(file);
  const ext=(file.name.match(/\.([a-zA-Z0-9]+)$/)||[])[1]||'jpg';
  const photoNameMap={north:'N',east:'E',south:'S',west:'W',overall:'全景',animal1:'動物1',animal2:'動物2',animal3:'動物3'};
@@ -775,44 +805,39 @@ function showPhotoConfirmation(file,key,input){
   <h3 style="margin:0 0 10px">この写真を使用しますか？</h3>
   <img alt="撮影した写真の確認" style="display:block;width:100%;max-height:58dvh;object-fit:contain;background:#111;border-radius:10px">
   <p style="font-size:13px;color:#52645a;margin:10px 0">保存名：${fileName}</p>
-  <p style="font-size:12px;color:#52645a;margin:0 0 10px">対応端末では、次の画面で「写真に保存」を選ぶと写真アプリに保存できます。</p>
+  <p data-save-hint style="font-size:12px;color:#52645a;margin:0 0 10px"></p>
   <div style="display:flex;gap:10px">
    <button type="button" data-retake style="flex:1;padding:13px;border:1px solid #9aa99f;border-radius:9px;background:#fff;color:#24352b;font-size:16px">撮り直す</button>
    <button type="button" data-use style="flex:1;padding:13px;border:0;border-radius:9px;background:#1f513b;color:#fff;font-size:16px;font-weight:700">OK・保存する</button>
   </div>
  </div>`;
  const img=modal.querySelector('img');img.src=previewUrl;
+ const nativePlatform=window.YachoNativePhoto?.platform?.();
+ modal.querySelector('[data-save-hint]').textContent=nativeCapture?(nativePlatform==='android'?'OKを押すとDownload/森林調査野帳へ保存します。':'OKを押すと「ファイル」アプリ内のこのiPhone内へ保存します。'):'OKを押すと、ブラウザの標準ダウンロード先へ保存します。';
  const cleanup=()=>{URL.revokeObjectURL(previewUrl);modal.remove();};
- modal.querySelector('[data-retake]').onclick=()=>{cleanup();input.value='';input.click();};
+ modal.querySelector('[data-retake]').onclick=()=>{cleanup();if(nativeCapture){launchPhotoCamera(key);}else if(input){input.value='';input.click();}};
  modal.querySelector('[data-use]').onclick=async()=>{
   const useButton=modal.querySelector('[data-use]');
-  useButton.disabled=true;useButton.textContent='保存先を開いています…';
-  const photoFile=new File([file],fileName,{type:file.type||'image/jpeg',lastModified:file.lastModified||Date.now()});
-  const shareData={files:[photoFile],title:'撮影写真'};
+  useButton.disabled=true;useButton.textContent='保存しています…';
   try{
-   if(navigator.share&&navigator.canShare&&navigator.canShare(shareData)){
-    await navigator.share(shareData);
+   if(nativeCapture&&window.YachoNativePhoto?.isNative?.()){
+    const saved=await window.YachoNativePhoto.save(nativeCapture,fileName);
     data.photos[key]=true;persist();renderPhotos();cleanup();
-    return;
+    alert('写真を保存しました。\n保存先：'+(window.YachoNativePhoto.platform()==='android'?'Download/森林調査野帳':'このiPhone内／森林調査野帳')+'\nファイル名：'+fileName);
+   }else{
+    const photoFile=new File([file],fileName,{type:file.type||'image/jpeg',lastModified:file.lastModified||Date.now()});
+    const downloadUrl=URL.createObjectURL(photoFile);
+    const a=document.createElement('a');a.href=downloadUrl;a.download=fileName;
+    a.style.display='none';document.body.appendChild(a);a.click();a.remove();
+    data.photos[key]=true;persist();renderPhotos();cleanup();
+    setTimeout(()=>URL.revokeObjectURL(downloadUrl),60000);
    }
-  }catch(error){
-   if(error&&error.name==='AbortError'){
-    useButton.disabled=false;useButton.textContent='OK・保存する';
-    return;
-   }
-   console.warn('写真共有に失敗しました:',error);
-   useButton.disabled=false;useButton.textContent='OK・保存する';
-   alert('写真アプリへの共有を開始できませんでした。もう一度お試しください。');
-   return;
+  }catch(e){
+   console.error(e);useButton.disabled=false;useButton.textContent='OK・保存する';
+   alert('写真を保存できませんでした。\n'+(e?.message||e));
   }
-  // ファイル共有に対応していないブラウザでは、従来のダウンロード方式にフォールバック
-  const downloadUrl=URL.createObjectURL(file);
-  const a=document.createElement('a');a.href=downloadUrl;a.download=fileName;
-  document.body.appendChild(a);a.click();a.remove();
-  data.photos[key]=true;persist();renderPhotos();cleanup();
-  setTimeout(()=>URL.revokeObjectURL(downloadUrl),30000);
  };
- modal.addEventListener('click',e=>{if(e.target===modal){cleanup();input.value='';}});
+ modal.addEventListener('click',e=>{if(e.target===modal){cleanup();if(input)input.value='';}});
  document.body.appendChild(modal);
 }
 function isTreeHeightDisabled(t){const speciesGroup=String(t?.speciesGroup||'');return !!t?.deadTree||(!!t?.nonCanopy&&speciesGroup==='広葉樹');}
@@ -990,7 +1015,7 @@ function saveWithWarning(){const m=missingItems();if(m.length){const ok=confirm(
 function download(name,content,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function exportJSON(){collectFields();persist();download(`野帳_${data.basic.plotId||'未設定'}_${data.basic.date||'日付未設定'}.json`,JSON.stringify(data,null,2),'application/json;charset=utf-8');}
 function csvCell(v){return '"'+String(v??'').replace(/"/g,'""')+'"';}
-function exportCSV(){const rows=[['樹木計測No','標準木No','標準木選定','樹種','胸高直径cm','樹木樹高1回目m','樹木樹高2回目m','樹木生枝下高1回目m','樹木生枝下高2回目m','標準木樹高1回目m','標準木樹高2回目m','標準木枝下高1回目m','標準木枝下高2回目m','象限','境界木','枯損木','折損木','根曲がり','シカ剥皮','クマ剥皮','標準木境界木','標準木根曲がり','標準木シカ剥皮','標準木クマ剥皮','状態・備考']];for(const t of data.trees){const ri=repIndexFor(t.uid);const rep=ri>=0?data.representatives[ri]:null;rows.push([t.no,ri>=0?ri+1:'',ri>=0?'標準木':'',t.species,t.dbh,isTreeHeightDisabled(t)?'':(t.height||''),isTreeHeightDisabled(t)?'':(t.height2||''),t.crownBaseHeight||'',t.crownBaseHeight2||'',rep?.height||'',rep?.height2||'',rep?.crownBaseHeight||'',rep?.crownBaseHeight2||'',t.quadrant,t.boundaryTree||'',t.deadTree?'○':'',t.brokenTree?'○':'',t.bentRoot?'○':'',t.deerBark?'○':'',t.bearBark?'○':'',ri>=0?data.representatives[ri].boundaryTree||'':'',ri>=0&&data.representatives[ri].bentRoot?'○':'',ri>=0&&data.representatives[ri].deerBark?'○':'',ri>=0&&data.representatives[ri].bearBark?'○':'',t.status]);}download(`樹木一覧_${data.basic.plotId||'未設定'}.csv`,'\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8');}
+function exportCSV(){const rows=[['樹木計測No','標準木No','標準木選定','樹種','胸高直径cm','樹木樹高1回目m','樹木樹高2回目m','樹木生枝下高1回目m','樹木生枝下高2回目m','標準木樹高1回目m','標準木樹高2回目m','標準木枝下高1回目m','標準木枝下高2回目m','象限','境界木','枯損木','折損木','根曲がり','シカ剥皮','クマ剥皮','標準木境界木','標準木根曲がり','標準木シカ剥皮','標準木クマ剥皮','状態・備考']];for(const t of data.trees){const ri=repIndexFor(t.uid);const rep=ri>=0?data.representatives[ri]:null;rows.push([t.no,ri>=0?ri+1:'',ri>=0?'標準木':'',t.species,t.dbh,isTreeHeightDisabled(t)?'':(t.height||''),isTreeHeightDisabled(t)?'':(t.height2||''),t.crownBaseHeight||'',t.crownBaseHeight2||'',rep?.height||'',rep?.height2||'',rep?.crownBaseHeight||'',rep?.crownBaseHeight2||'',t.quadrant,displayBoundary(t.boundaryTree),t.deadTree?'○':'',t.brokenTree?'○':'',t.bentRoot?'○':'',t.deerBark?'○':'',t.bearBark?'○':'',ri>=0?displayBoundary(data.representatives[ri].boundaryTree):'',ri>=0&&data.representatives[ri].bentRoot?'○':'',ri>=0&&data.representatives[ri].deerBark?'○':'',ri>=0&&data.representatives[ri].bearBark?'○':'',t.status]);}download(`樹木一覧_${data.basic.plotId||'未設定'}.csv`,'\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8');}
 function validate(){renderWarnings();document.querySelector('[data-tab="export"]').click();document.getElementById('warningBox').scrollIntoView({behavior:'smooth',block:'start'});}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('main section').forEach(s=>s.classList.toggle('active',s.id===b.dataset.tab));if(b.dataset.tab==='export')renderWarnings();});
 document.getElementById('addTree').onclick=addTree;document.getElementById('saveBtn').onclick=saveWithWarning;document.getElementById('saveTop').onclick=saveWithWarning;document.getElementById('validateTop').onclick=validate;document.getElementById('jsonBtn').onclick=exportJSON;document.getElementById('csvBtn').onclick=exportCSV;document.getElementById('openSwapByNo').onclick=openSwap;document.getElementById('swapCancel').onclick=()=>document.getElementById('swapDialog').close();document.getElementById('swapConfirm').onclick=confirmSwap;
@@ -1032,205 +1057,13 @@ document.getElementById('newPlotFromProjectBtn').onclick=()=>{if(activeProjectPa
 renderProjects();
 </script>
 
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, serverTimestamp, arrayUnion } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+<script type="module" src="./native-photo.js"></script>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyC8hIjTI6M132YEfyllhE9Z7fFVLbc4Vds",
-  authDomain: "forest-survey-app-zzz.firebaseapp.com",
-  projectId: "forest-survey-app-zzz",
-  storageBucket: "forest-survey-app-zzz.firebasestorage.app",
-  messagingSenderId: "849070586435",
-  appId: "1:849070586435:web:fd7be402622c52a15772f6",
-  measurementId: "G-1LEQV6RF8Z"
-};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-// Keep the signed-in state in this browser across restarts until the user logs out.
-await setPersistence(auth, browserLocalPersistence);
-const db = getFirestore(app);
-let deletingProjectIds = new Set();
-let deletingPlotIds = new Set();
-
-function plotVersionMs(pl){
- if(Number.isFinite(Number(pl?.updatedAtMs))&&Number(pl.updatedAtMs)>0)return Number(pl.updatedAtMs);
- if(pl?.updatedAt){const parsed=Date.parse(pl.updatedAt);if(Number.isFinite(parsed))return parsed;}
- const server=pl?.updatedAtServer;
- if(server&&typeof server.toMillis==='function')return server.toMillis();
- if(server&&Number.isFinite(server.seconds))return server.seconds*1000;
- return 0;
-}
-function mergeRemoteAndLocalProjects(remote,local){
- const result=[];
- for(const r of remote){
-  const l=local.find(x=>x.id===r.id);
-  if(!l){const {deletedPlotIds,...clean}=r;result.push(clean);continue;}
-  const deleted=new Set(r.deletedPlotIds||[]);
-  const map=new Map((r.plots||[]).map(pl=>[pl.id,pl]));
-  for(const pl of (l.plots||[])){
-   if(deleted.has(pl.id))continue;
-   const old=map.get(pl.id);
-   if(!old||plotVersionMs(pl)>=plotVersionMs(old))map.set(pl.id,pl);
-  }
-  const {deletedPlotIds,...remoteMeta}=r;
-  result.push({...l,...remoteMeta,plots:[...map.values()]});
- }
- for(const l of local)if(!remote.some(r=>r.id===l.id))result.push(l);
- return result;
-}
-async function getDeletedProjectIds(){
- // projects ドキュメントに残す削除マーカーを全端末で共有する。
- const snap=await getDocs(collection(db,'projects'));
- return new Set(snap.docs.filter(d=>d.data()?.deleted===true).map(d=>d.id));
-}
-
-window.deleteCloudPlot=async function(projectId,plotId){
- if(!auth.currentUser)throw new Error('ログイン状態を確認できません。再ログインしてください。');
- const key=projectId+'::'+plotId;
- if(deletingPlotIds.has(key))return;
- deletingPlotIds.add(key);
- try{
-  while(syncing)await new Promise(resolve=>setTimeout(resolve,100));
-  await setDoc(doc(db,'projects',projectId),{
-   deletedPlotIds:arrayUnion(plotId),
-   plotsUpdatedAt:serverTimestamp()
-  },{merge:true});
-  await deleteDoc(doc(db,'projects',projectId,'plots',plotId));
- }finally{
-  deletingPlotIds.delete(key);
- }
-};
-
-window.deleteCloudProject=async function(projectId){
- if(!auth.currentUser)throw new Error('ログイン状態を確認できません。再ログインしてください。');
- if(deletingProjectIds.has(projectId))return;
- deletingProjectIds.add(projectId);
- try{
-  // 先に進行中の同期を終わらせ、同期処理が削除対象を再作成しないようにする。
-  while(syncing) await new Promise(resolve=>setTimeout(resolve,100));
-
-  // Firestore は親ドキュメントを消してもサブコレクションを自動削除しないため、
-  // 配下の plots をすべて明示的に削除する。
-  const plotSnap=await getDocs(collection(db,'projects',projectId,'plots'));
-  for(const plotDoc of plotSnap.docs){
-   await deleteDoc(plotDoc.ref);
-  }
-
-  // プロジェクト本体の調査データ・名称等を消し、削除マーカーだけを残す。
-  // マーカーがあることで、別端末の古いローカルデータが再同期で復活するのを防ぐ。
-  await setDoc(doc(db,'projects',projectId),{
-   deleted:true,
-   deletedAt:serverTimestamp(),
-   deletedBy:auth.currentUser.email||''
-  });
- }catch(error){
-  console.error('Cloud project deletion failed:',error);
-  throw error;
- }finally{
-  deletingProjectIds.delete(projectId);
- }
-};
-const gate = document.getElementById('authGate');
-const statusEl = document.getElementById('authStatus');
-const cloudBar = document.getElementById('cloudBar');
-const syncStatus = document.getElementById('syncStatus');
-let cloudReady = false, syncing = false, syncQueued = false;
-const setStatus = (msg, bad=false) => { statusEl.textContent=msg; statusEl.style.color=bad?'#9b2525':''; };
-const setSyncStatus = msg => { syncStatus.textContent=msg; };
-function showSignedIn(user){gate.style.display='none';cloudBar.style.display='flex';document.getElementById('signedInLabel').textContent='ログイン中：'+(user.email||'');}
-function showSignedOut(){gate.style.display='flex';cloudBar.style.display='none';document.getElementById('appShell').style.display='none';document.getElementById('projectHome').style.display='none';document.getElementById('projectPage').style.display='none';cloudReady=false;}
-async function loadCloudProjects(){
- const snap=await getDocs(collection(db,'projects'));
- const remote=[];
- for(const pd of snap.docs){
-   const meta=pd.data();
-   if(meta.deleted===true)continue;
-   const plotSnap=await getDocs(collection(db,'projects',pd.id,'plots'));
-   const deletedPlotIds=Array.isArray(meta.deletedPlotIds)?meta.deletedPlotIds:[];
-   const deletedPlotSet=new Set(deletedPlotIds);
-   const plots=plotSnap.docs.filter(d=>!deletedPlotSet.has(d.id)&&d.data()?.deleted!==true).map(d=>({id:d.id,...d.data()}));
-   // 旧データでプロジェクト情報に調査方式がない場合は、地点データ側の方式から復元する。
-   const savedPlotMode=plots.map(pl=>pl.data?.surveyMode).find(mode=>mode==='allHeight'||mode==='standard12');
-   const surveyMode=(meta.surveyMode==='allHeight'||meta.surveyMode==='standard12')?meta.surveyMode:(savedPlotMode||'standard12');
-   remote.push({id:pd.id,name:meta.name||'プロジェクト',surveyMode,createdAt:meta.createdAt||'',updatedAt:meta.updatedAt||'',plots,deletedPlotIds});
- }
- return remote;
-}
-async function syncAll(){
- if(!auth.currentUser||!cloudReady)return;
- if(syncing){syncQueued=true;return;}
- syncing=true;setSyncStatus('クラウドに同期中…');
- try{
-  const deletedIds=await getDeletedProjectIds();
-  const local=(Array.isArray(projects)?projects:[]).filter(p=>!deletingProjectIds.has(p.id)&&!deletedIds.has(p.id)&&!(JSON.parse(localStorage.getItem(DELETED_PROJECTS_KEY)||'[]')).includes(p.id));
-  const remote=(await loadCloudProjects()).filter(p=>!deletedIds.has(p.id));
-  // Local data is preserved; remote-only projects/plots are added on sign-in.
-  const merged=mergeRemoteAndLocalProjects(remote,local);
-  projects=merged;localStorage.setItem('forest_field_projects_v1',JSON.stringify(projects));queueDeviceBackup();renderProjects();
-  const liveProjectIds=new Set(projects.map(p=>p.id));
-  for(const p of projects){
-   await setDoc(doc(db,'projects',p.id),{name:p.name||'',surveyMode:(p.surveyMode==='allHeight'?'allHeight':'standard12'),createdAt:p.createdAt||'',updatedAt:p.updatedAt||'',updatedBy:auth.currentUser.email||'',updatedAtServer:serverTimestamp()},{merge:true});
-   const livePlotIds=new Set((p.plots||[]).map(pl=>pl.id));
-   for(const pl of (p.plots||[]))await setDoc(doc(db,'projects',p.id,'plots',pl.id),{plotId:pl.plotId||'',date:pl.date||'',data:pl.data||{},updatedAt:pl.updatedAt||'',updatedAtMs:plotVersionMs(pl)||Date.now(),updatedBy:auth.currentUser.email||'',updatedAtServer:serverTimestamp()},{merge:true});
-   const remotePlotSnap=await getDocs(collection(db,'projects',p.id,'plots'));
-   for(const d of remotePlotSnap.docs)if(d.data()?.deleted!==true&&!livePlotIds.has(d.id))await deleteDoc(d.ref);
-  }
-  // 削除済みプロジェクトは deleted フラグで除外し、同期時に復元しない。
-  localStorage.setItem('forest_field_projects_v1',JSON.stringify(projects));queueDeviceBackup();renderProjects();setSyncStatus('同期済み：'+new Date().toLocaleTimeString('ja-JP'));
- }catch(e){console.error(e);setSyncStatus('同期できません（通信またはFirestoreルールを確認）');}
- finally{syncing=false;if(syncQueued){syncQueued=false;syncAll();}}
-}
-window.requestCloudSync=()=>{if(!cloudReady)return;syncAll();};
-window.addEventListener('online',()=>{if(cloudReady)syncAll();});
-// Save hooks: sync after local changes without blocking field entry.
-const oldWriteProjects=writeProjects;
-writeProjects=function(){oldWriteProjects();window.requestCloudSync?.();};
-const oldPersist=persist;
-persist=function(){const result=oldPersist();window.requestCloudSync?.();return result;};
-// Also sync snapshots and project changes after the original functions update local state.
-const oldSavePlotSnapshot=savePlotSnapshot;
-savePlotSnapshot=function(showMessage=true){const result=oldSavePlotSnapshot(showMessage);window.requestCloudSync?.();return result;};
-
-document.getElementById('loginBtn').addEventListener('click',async()=>{
- const email=document.getElementById('authEmail').value.trim();const password=document.getElementById('authPassword').value;
- if(!email||!password){setStatus('メールアドレスとパスワードを入力してください。',true);return;}
- const btn=document.getElementById('loginBtn');btn.disabled=true;setStatus('ログイン中…');
- try{await signInWithEmailAndPassword(auth,email,password);}catch(e){const code=e?.code||'unknown';const message=e?.message||String(e);setStatus('ログイン失敗：'+code+' — '+message,true);console.error('Firebase login error:',code,message,e);}finally{btn.disabled=false;}
-});
-document.getElementById('togglePassword').addEventListener('click',()=>{
- const input=document.getElementById('authPassword');
- const toggle=document.getElementById('togglePassword');
- const showing=input.type==='password';
- input.type=showing?'text':'password';
- toggle.setAttribute('aria-pressed',String(showing));
- toggle.setAttribute('aria-label',showing?'パスワードを隠す':'パスワードを表示');
- toggle.title=showing?'パスワードを隠す':'パスワードを表示';
- toggle.innerHTML=showing
-  ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a15.8 15.8 0 0 1-3.2 4.1"/><path d="M6.2 6.2C3.5 8 2 12 2 12s3.6 7 10 7a10.8 10.8 0 0 0 4-.8"/></svg>'
-  : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
-});
-document.getElementById('authPassword').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginBtn').click();});
-document.getElementById('logoutBtn').addEventListener('click',async()=>{if(confirm('ログアウトしますか？'))await signOut(auth);});
-document.getElementById('syncNowBtn').addEventListener('click',()=>syncAll());
-await restoreDeviceSnapshotIfNeeded();
-onAuthStateChanged(auth,async user=>{
- if(!user){showSignedOut();setStatus('登録済みのメールアドレスでログインしてください。');return;}
- showSignedIn(user);setStatus('ログイン済み。クラウドデータを確認しています…');
- try{const remote=await loadCloudProjects();
-   // Keep local projects; merge remote projects by ID and keep local plot versions for matching IDs.
-   const deletedIds=await getDeletedProjectIds();
-   const local=(Array.isArray(projects)?projects:[]).filter(p=>!deletedIds.has(p.id)&&!(JSON.parse(localStorage.getItem(DELETED_PROJECTS_KEY)||'[]')).includes(p.id));
-   const filteredRemote=remote.filter(p=>!deletedIds.has(p.id));
-   const merged=mergeRemoteAndLocalProjects(filteredRemote,local);
-   projects=merged;localStorage.setItem('forest_field_projects_v1',JSON.stringify(projects));queueDeviceBackup();renderProjects();cloudReady=true;showHome();setStatus('ログインしました。');await syncAll();
- }catch(e){console.error(e);cloudReady=false;setStatus('Firestoreに接続できません。セキュリティルールとデータベース作成を確認してください。',true);setSyncStatus('未同期');}
-});
-</script>
+<script type="module" src="./firebase-sync.js"></script>
 
 <script>
-if ('serviceWorker' in navigator) {
+const isCapacitorShell = location.protocol === 'capacitor:' || (location.protocol === 'https:' && location.hostname === 'localhost');
+if ('serviceWorker' in navigator && !isCapacitorShell) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(err => {
       console.warn('オフライン機能の登録に失敗しました:', err);
